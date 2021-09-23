@@ -2,6 +2,8 @@ package io.chrisdima.alertmanager.handlers;
 
 import io.chrisdima.alertmanager.enums.ContactType;
 import io.chrisdima.alertmanager.objects.Alert;
+import io.chrisdima.utils.aws.AwsFactory;
+import io.chrisdima.utils.aws.DynamoDBClient;
 import io.vertx.core.Handler;
 import io.vertx.core.impl.logging.Logger;
 import io.vertx.core.impl.logging.LoggerFactory;
@@ -15,11 +17,18 @@ import static io.chrisdima.alertmanager.data.SimpleDatastore.getAlert;
 
 public class CallAlertHandler implements Handler<RoutingContext> {
   private final Logger logger = LoggerFactory.getLogger( CallAlertHandler.class );
+
+  private DynamoDBClient dynamoDBClient;
+
+  public CallAlertHandler() {
+    dynamoDBClient = AwsFactory.dynamoClient();
+  }
+
   @Override
   public void handle(RoutingContext context) {
     String id = context.getBodyAsJson().getString("id");
     if(SuperBasicTokenCheck.checkAuth(context)) {
-      Alert alert = getAlert(id);
+      Alert alert = dynamoDBClient.getAlert(id);
       callAlert(alert);
       context
           .response()
