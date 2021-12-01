@@ -1,0 +1,13 @@
+[Unit]
+Description=Alert Manager service
+After=network.target
+StartLimitIntervalSec=0
+[Service]
+Type=simple
+Restart=always
+RestartSec=1
+User=chris
+ExecStart=/home/chris/workspace/alert-manager/alert-manager.sh
+
+[Install]
+WantedBy=multi-user.target

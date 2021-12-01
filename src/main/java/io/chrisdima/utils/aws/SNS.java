@@ -26,7 +26,7 @@ public class SNS {
                   "AWS.MM.SMS.OriginationNumber",
                   MessageAttributeValue.builder()
                       .dataType("String")
-                      .stringValue(System.getenv("AWS.MM.SMS.OriginationNumber"))
+                      .stringValue(System.getenv("AWS_MM_SMS_OriginationNumber"))
                       .build()))
           .build();
 
