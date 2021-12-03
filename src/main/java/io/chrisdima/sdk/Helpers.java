@@ -4,16 +4,16 @@ import com.google.inject.internal.util.Maps;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Random;
 
 public class Helpers {
   private static final Map<String, String> addressToPOJO = Map.of(
-      "hello", "world",
-      "internal:v1:crazy_case", "io.chrisdima.sdk.pojos.UppercaseRequest"
+      "internal:v1:uppercase", "io.chrisdima.sdk.pojos.UppercaseRequest",
+      "internal:v1:lazy", "io.chrisdima.sdk.pojos.LazyRequest"
   );
 
 //  Maps address components to a pojo class.
-  public static String pojoMapper(String event, String version, String namespace) {
-    String address = createEventbusAddress(event, version, namespace);
+  public static String pojoMapper(String address) {
     return addressToPOJO.getOrDefault(address, null);
   }
 
