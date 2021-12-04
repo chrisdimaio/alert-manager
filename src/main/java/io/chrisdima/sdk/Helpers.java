@@ -6,6 +6,7 @@ import java.util.Map;
 public class Helpers {
   private static final Map<String, String> addressToPOJO = Map.of(
       "internal:v1:uppercase", "io.chrisdima.sdk.pojos.UppercaseRequest",
+      "internal:v1:image", "io.chrisdima.sdk.pojos.UppercaseRequest",
       "internal:v1:lazy", "io.chrisdima.sdk.pojos.LazyRequest"
   );
 
@@ -26,6 +27,10 @@ public class Helpers {
       version = components[1];
       event = components[2];
     }
+    return String.format("%s:%s:%s", namespace, version, event);
+  }
+
+  public static String createEventbusAddress(String event, String version, String namespace) {
     return String.format("%s:%s:%s", namespace, version, event);
   }
 }

@@ -17,13 +17,17 @@ import io.chrisdima.sdk.pojos.UppercaseRequest;
 import io.chrisdima.sdk.pojos.UppercaseResponse;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Promise;
+import io.vertx.core.buffer.Buffer;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.impl.logging.Logger;
 import io.vertx.core.impl.logging.LoggerFactory;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
+import java.io.File;
+import java.io.IOException;
 import java.net.HttpURLConnection;
+import java.nio.file.Files;
 
 public class HTTPVerticle extends BaseVerticle {
   private static final int DEFAULT_HTTP_PORT = 1234;
@@ -99,10 +103,15 @@ public class HTTPVerticle extends BaseVerticle {
 
   private void respondToRestCall(RoutingContext context, BasePojo response, String contentType) {
     try {
-      context
-          .response()
-          .putHeader("content-type", contentType)
-          .end(objectMapper.writeValueAsString(response));
+      if (response.isBinary()) {
+        logger.info("It's binary!");
+        context.response().putHeader("content-type", "image/jpeg").end(response.getBuffer());
+      } else {
+        context
+            .response()
+            .putHeader("content-type", contentType)
+            .end(objectMapper.writeValueAsString(response));
+      }
     }
     catch (JsonProcessingException jpe) {
       context.fail(HttpURLConnection.HTTP_INTERNAL_ERROR);
