@@ -1,0 +1,7 @@
+{
+  "instances": 1,
+  "maxWorkerExecuteTime" : 60000000000,
+  "maxWorkerExecuteTimeUnit" : "SECONDS",
+  "worker" : false,
+  "workerPoolSize" : 20
+}
