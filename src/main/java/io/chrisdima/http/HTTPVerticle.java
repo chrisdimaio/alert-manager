@@ -1,8 +1,9 @@
 package io.chrisdima.http;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.chrisdima.sdk.CookieCrumbGenerator;
 import io.chrisdima.sdk.Helpers;
+import io.chrisdima.sdk.base.BaseVerticle;
 import io.chrisdima.sdk.codecs.LazyRequestCodec;
 import io.chrisdima.sdk.codecs.LazyResponseCodec;
 import io.chrisdima.sdk.codecs.UppercaseRequestCodec;
@@ -14,21 +15,22 @@ import io.chrisdima.sdk.pojos.LazyRequest;
 import io.chrisdima.sdk.pojos.LazyResponse;
 import io.chrisdima.sdk.pojos.UppercaseRequest;
 import io.chrisdima.sdk.pojos.UppercaseResponse;
-import io.vertx.core.AbstractVerticle;
+import io.vertx.core.AsyncResult;
 import io.vertx.core.Promise;
-import io.vertx.core.Vertx;
+import io.vertx.core.eventbus.Message;
 import io.vertx.core.impl.logging.Logger;
 import io.vertx.core.impl.logging.LoggerFactory;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
+import java.net.HttpURLConnection;
 
-public class HTTPVerticle extends AbstractVerticle {
+public class HTTPVerticle extends BaseVerticle {
   private static final int DEFAULT_HTTP_PORT = 1234;
   private final static String NAMESPACE = "internal";
 
   private final Logger logger = LoggerFactory.getLogger( APIHandler.class );
-  private final CookieCrumbGenerator cookieCrumbGenerator = new CookieCrumbGenerator();
+  private final ObjectMapper objectMapper = new ObjectMapper();
 
   @Override
   public void start(Promise<Void> future) {
@@ -40,8 +42,6 @@ public class HTTPVerticle extends AbstractVerticle {
     // Need to figure out cluster factory before this works. -cluster
     vertx.deployVerticle(new UppercaseVerticle());
     vertx.deployVerticle(new LazyVerticle());
-
-    logger.info(UppercaseRequest.class);
 
     Router router = Router.router(vertx);
     router.route("/*").handler(BodyHandler.create());
@@ -63,49 +63,50 @@ public class HTTPVerticle extends AbstractVerticle {
   }
 
   public void handler(RoutingContext context) {
-    String[] pathComponents = Helpers.getPathComponents(context.request().path(), NAMESPACE);
-    String address = Helpers.createEventbusAddress(
-        pathComponents[0], pathComponents[1], pathComponents[2]);
-
-    Object request = null;
-    try {
-      request = createRequest(context);
-    } catch (ClassNotFoundException cnfe ) {
-      logger.error("class not found");
-    } catch (Exception e) {
-      logger.error(e.getMessage());
-    }
+    String address = Helpers.createEventbusAddress(context, NAMESPACE);
 
     vertx.eventBus().request(address,
-        request,
-        reply -> {
-          logger.info("Sending event to " + address);
-          Object response = (Object)reply.result().body();
-          ObjectMapper objectMapper = new ObjectMapper();
-          try {
-            context
-                .response()
-                .putHeader("content-type", "application/json; charset=utf-8")
-                .end(objectMapper.writeValueAsString(response));
-          } catch (Exception e) {
-            logger.error(e.getMessage());
-          }
-
-    });
+        request(context),
+        reply -> reply(context, address, reply));
   }
 
-  private BasePojo createRequest(RoutingContext context) throws ClassNotFoundException {
-    String[] pathComponents = Helpers.getPathComponents(context.request().path(), NAMESPACE);
-    String address = Helpers.createEventbusAddress(
-        pathComponents[0], pathComponents[1], pathComponents[2]);
+  private void reply(RoutingContext context, String address, AsyncResult<Message<Object>> reply) {
+    logger.info("Sending event to " + address);
 
-    String pojoClass = Helpers.pojoMapper(address);
-    logger.info("address \"" + address + "\" mapped to \"" + pojoClass + "\"");
-    Class clazz = Class.forName(pojoClass);
+    BasePojo response = (BasePojo)reply.result().body();
+    respondToRestCall(context, response, "application/json; charset=utf-8");
+  }
 
-    BasePojo request = (BasePojo)context.getBodyAsJson().mapTo(clazz);
+  private BasePojo request(RoutingContext context) {
+    String address = Helpers.createEventbusAddress(context, NAMESPACE);
+
+    Class<?> requestPojo = null;
+    try {
+      String pojoClass = Helpers.pojoMapper(address);
+      logger.info("address \"" + address + "\" mapped to \"" + pojoClass + "\"");
+
+      requestPojo = Class.forName(pojoClass);
+    } catch (ClassNotFoundException e) {
+      context.fail(HttpURLConnection.HTTP_NOT_FOUND);
+      logger.error(e);
+    }
+
+    BasePojo request = (BasePojo)context.getBodyAsJson().mapTo(requestPojo);
     request.setCookieCrumb(cookieCrumbGenerator.next());
     logger.info("cookie crumb: " + request.getCookieCrumb());
     return request;
+  }
+
+  private void respondToRestCall(RoutingContext context, BasePojo response, String contentType) {
+    try {
+      context
+          .response()
+          .putHeader("content-type", contentType)
+          .end(objectMapper.writeValueAsString(response));
+    }
+    catch (JsonProcessingException jpe) {
+      context.fail(HttpURLConnection.HTTP_INTERNAL_ERROR);
+      logger.error(jpe);
+    }
   }
 }
