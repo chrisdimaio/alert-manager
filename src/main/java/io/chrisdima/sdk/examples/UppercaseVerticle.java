@@ -1,6 +1,7 @@
 package io.chrisdima.sdk.examples;
 
 import io.chrisdima.sdk.Helpers;
+import io.chrisdima.sdk.base.BaseVerticle;
 import io.chrisdima.sdk.pojos.UppercaseRequest;
 import io.chrisdima.sdk.pojos.UppercaseResponse;
 import io.vertx.core.AbstractVerticle;
@@ -12,16 +13,18 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 
-public class UppercaseVerticle extends AbstractVerticle {
+public class UppercaseVerticle extends BaseVerticle {
   private final static String EVENT = "uppercase";
   private final static String VERSION = "v1";
   private final static String NAMESPACE = "internal";
 
-  private final Logger logger = LoggerFactory.getLogger( UppercaseVerticle.class );
-
   @Override
   public void start(Promise<Void> future) {
+    logger = LoggerFactory.getLogger( UppercaseVerticle.class );
+
     String address = Helpers.createEventbusAddress(EVENT, VERSION, NAMESPACE);
+    publishService(this.getClass().getName(), address);
+
     logger.info("Listening to eventbus @ " + address);
     vertx.eventBus().consumer(address, message -> {
 
