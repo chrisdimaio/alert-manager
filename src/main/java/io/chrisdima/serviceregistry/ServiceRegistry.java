@@ -1,11 +1,9 @@
 package io.chrisdima.serviceregistry;
 
-import io.chrisdima.sdk.examples.UppercaseVerticle;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Promise;
 import io.vertx.core.impl.logging.Logger;
 import io.vertx.core.impl.logging.LoggerFactory;
-import io.vertx.core.shareddata.AsyncMap;
 import io.vertx.core.shareddata.LocalMap;
 
 public class ServiceRegistry extends AbstractVerticle {

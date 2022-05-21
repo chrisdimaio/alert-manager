@@ -7,6 +7,7 @@ public class Helpers {
   private static final Map<String, String> addressToPOJO = Map.of(
       "internal:v1:uppercase", "io.chrisdima.sdk.pojos.UppercaseRequest",
       "internal:v1:image", "io.chrisdima.sdk.pojos.UppercaseRequest",
+      "internal:v1:jsonobject", "io.vertx.core.json.JsonObject",
       "internal:v1:lazy", "io.chrisdima.sdk.pojos.LazyRequest"
   );
 

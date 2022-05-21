@@ -3,28 +3,25 @@ package io.chrisdima.sdk.examples;
 import io.chrisdima.sdk.Helpers;
 import io.chrisdima.sdk.base.BaseVerticle;
 import io.vertx.core.Promise;
-import io.vertx.core.buffer.Buffer;
 import io.vertx.core.eventbus.DeliveryOptions;
 import io.vertx.core.impl.logging.LoggerFactory;
 import io.vertx.core.json.JsonObject;
-import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Base64;
 /*
 * Returns base 64 encoded version of file specified by filePath.
 * */
-public class BinaryVerticle extends BaseVerticle {
-  private final static String EVENT = "binary";
+public class FileGetterVerticle extends BaseVerticle {
+  private final static String EVENT = "filegetter";
   private final static String VERSION = "v1";
   private final static String NAMESPACE = "internal";
 
   @Override
   public void start(Promise<Void> future) {
-    logger = LoggerFactory.getLogger( BinaryVerticle.class );
+    logger = LoggerFactory.getLogger( FileGetterVerticle.class );
 
     String address = Helpers.createEventbusAddress(EVENT, VERSION, NAMESPACE);
     publishService(this.getClass().getName(), address);
