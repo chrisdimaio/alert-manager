@@ -27,7 +27,7 @@ public class HTTPVerticle extends BaseVerticle {
 
   @Override
   public void start(Promise<Void> future) {
-    logger = LoggerFactory.getLogger( APIHandler.class );
+    logger = LoggerFactory.getLogger( HTTPVerticle.class );
 
     // Publish this service.
     publishService(this.getClass().getName(), "some service");
@@ -59,15 +59,17 @@ public class HTTPVerticle extends BaseVerticle {
   public void handler(RoutingContext context) {
     String address = Helpers.createEventbusAddress(context, NAMESPACE);
 
-    vertx.eventBus().request(address,
-        context.getBodyAsJson(),
-        reply -> reply(context, address, reply));
-
+    if (serviceExists(address)) {
+      vertx.eventBus().request(address,
+          context.getBodyAsJson(),
+          reply -> reply(context, address, reply));
+    } else {
+      logger.error(address + " not found!");
+    }
   }
 
   private void reply(RoutingContext context, String address, AsyncResult<Message<Object>> reply) {
     logger.info("sending event to " + address);
-    logger.info("headers: " + reply.result().headers());
 
     context.response().putHeader("content-type", reply.result().headers().get("content_type"));
 

@@ -1,56 +1,102 @@
 package io.chrisdima.sdk.base;
 
 import io.chrisdima.sdk.CookieCrumbGenerator;
+import io.chrisdima.sdk.Message;
+import io.chrisdima.sdk.annotations.Address;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.impl.logging.Logger;
+import io.vertx.core.impl.logging.LoggerFactory;
 import io.vertx.core.json.JsonObject;
 import io.vertx.servicediscovery.Record;
 import io.vertx.servicediscovery.ServiceDiscovery;
-import io.vertx.servicediscovery.ServiceDiscoveryOptions;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.util.Arrays;
+import java.util.Objects;
+import java.util.concurrent.atomic.AtomicReference;
+import org.apache.commons.text.WordUtils;
 
 public abstract class BaseVerticle extends AbstractVerticle {
+  private String namespace = "internal";
+
   protected CookieCrumbGenerator cookieCrumbGenerator;
   protected Logger logger;
 
   protected BaseVerticle() {
     super();
-    this.cookieCrumbGenerator = new CookieCrumbGenerator();
+    logger = LoggerFactory.getLogger( this.getClass() );
+
   }
 
-  protected String discoverService(String name) {
-    return "nada";
-//    ServiceDiscovery discovery = ServiceDiscovery.create(vertx);
-//
-//    // Customize the configuration
-//    discovery = ServiceDiscovery.create(vertx,
-//        new ServiceDiscoveryOptions()
-//            .setAnnounceAddress("service-announce")
-//            .setName("my-name"));
-//
-//    // Get a record by name
-//    discovery.getRecord(r -> r.getName().equals(this.getClass().getName()), ar -> {
-//      if (ar.succeeded()) {
-//        if (ar.result() != null) {
-//          logger.info("Found service: " + ar.result());
-//          return ar.result().getLocation();
-//        } else {
-//          // the lookup succeeded, but no matching service
-//          logger.error("Failed to find service");
-//        }
-//      } else {
-//        // lookup failed
-//      }
-//    });
+  @Override
+  public void start() throws Exception {
+    processAddressAnnotations();
   }
 
-  protected void publishService(String name, String address){
+  private Class<?> getPojoClassFromAddress(String address) {
+    // Find a better way to do this.
+    String pojoClass = WordUtils
+        .capitalizeFully(address.replace(":", " "))
+        .replace(" ", "");
+
+    String pojoPath = this.getClass().getPackageName() + ".pojos." + pojoClass;
+    try {
+      return Class.forName(pojoPath);
+    } catch (ClassNotFoundException e) {
+      logger.error(e);
+    }
+    return null;
+  }
+
+  // Pull out all methods annotated with @Address and map them to their addresses.
+  private void processAddressAnnotations() {
+    for (Method method : this.getClass().getMethods()) {
+      if (Objects.nonNull(method)) {
+        Address addressAnnotation = method.getAnnotation(Address.class);
+        if (Objects.nonNull(addressAnnotation)) {
+          String address = addressAnnotation.value();
+          String nameSpacedAddress = this.namespace + ":" + address;
+          vertx.eventBus().consumer(nameSpacedAddress, message -> {
+              try {
+                Message<?> deserializedMessage =
+                    new io.chrisdima.sdk.Message<>(message, getPojoClassFromAddress(address));
+                method.invoke(this, deserializedMessage);
+              } catch (IllegalAccessError | Exception e) {
+                logger.error(e + "\n" + Arrays.toString(e.getStackTrace()));
+//                message.fail(500, e.getMessage());
+              }
+          });
+          this.publishService(nameSpacedAddress, nameSpacedAddress);
+        }
+      }
+    }
+  }
+
+  protected Boolean serviceExists(String address) {
     ServiceDiscovery discovery = ServiceDiscovery.create(vertx);
 
-    // Customize the configuration
-    discovery = ServiceDiscovery.create(vertx,
-        new ServiceDiscoveryOptions()
-            .setAnnounceAddress("service-announce")
-            .setName("my-name"));
+    AtomicReference<Boolean> exists = new AtomicReference<>(false);
+    discovery.getRecord(r -> r.getLocation().getString("endpoint").equals(address), ar -> {
+      if (ar.succeeded()) {
+        if (ar.result() != null) {
+          logger.info("Found service: " + ar.result());
+          exists.set(true);
+        } else {
+          // the lookup succeeded, but no matching service
+          logger.error("Failed to find service");
+        }
+      } else {
+        // lookup failed
+        logger.error("Error while looking up service");
+      }
+    });
+
+    discovery.close();
+    return exists.get();
+  }
+
+  protected void publishService(String name, String address) {
+    ServiceDiscovery discovery = ServiceDiscovery.create(vertx);
 
     Record record = new Record()
         .setType("eventbus-service-proxy")
@@ -70,9 +116,4 @@ public abstract class BaseVerticle extends AbstractVerticle {
 
     discovery.close();
   }
-
-//  Need to implement this in a way that pulls out the reply object's cookie crumb and reports it.
-//  protected  <T> EventBus request(String address, @Nullable Object message, Handler<AsyncResult<Message<T>>> replyHandler) {
-//    return vertx.eventBus().request(address, message, new DeliveryOptions(), replyHandler);
-//  }
 }
