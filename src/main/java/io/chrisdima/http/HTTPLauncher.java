@@ -1,17 +1,20 @@
 package io.chrisdima.http;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Launcher;
-import io.vertx.core.VertxOptions;
 import io.vertx.core.impl.logging.Logger;
 import io.vertx.core.impl.logging.LoggerFactory;
 import io.vertx.core.json.Json;
-import java.util.concurrent.TimeUnit;
 
 public class HTTPLauncher extends Launcher {
   private final Logger logger = LoggerFactory.getLogger( HTTPLauncher.class );
 
   public static void main(String[] args) {
+    io.vertx.core.json.jackson.DatabindCodec codec = (io.vertx.core.json.jackson.DatabindCodec) io.vertx.core.json.Json.CODEC;
+    ObjectMapper mapper = codec.mapper();
+    mapper.registerModule(new Jdk8Module());
     new HTTPLauncher().dispatch(args);
   }
 

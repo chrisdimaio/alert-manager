@@ -1,6 +1,5 @@
 package io.chrisdima.sdk.base;
 
-import io.chrisdima.sdk.CookieCrumbGenerator;
 import io.chrisdima.sdk.Message;
 import io.chrisdima.sdk.annotations.Address;
 import io.vertx.core.AbstractVerticle;
@@ -22,13 +21,11 @@ public abstract class BaseVerticle extends AbstractVerticle {
   private String namespace = "internal";
   private List<Record> serviceRecords = new ArrayList<>();
 
-  protected CookieCrumbGenerator cookieCrumbGenerator;
   protected Logger logger;
 
   protected BaseVerticle() {
     super();
     logger = LoggerFactory.getLogger( this.getClass() );
-
   }
 
   @Override
@@ -55,6 +52,10 @@ public abstract class BaseVerticle extends AbstractVerticle {
   // Runs at the end of start()
   public void run() {}
 
+  public void setNamespace(String namespace) {
+    this.namespace = namespace;
+  }
+
   private Class<?> getPojoClassFromAddress(String address) {
     // Find a better way to do this.
     String pojoClass = WordUtils
@@ -79,7 +80,7 @@ public abstract class BaseVerticle extends AbstractVerticle {
         Address addressAnnotation = method.getAnnotation(Address.class);
         if (Objects.nonNull(addressAnnotation)) {
           String address = addressAnnotation.value();
-          String nameSpacedAddress = this.namespace + ":" + address;
+          String nameSpacedAddress = namespace + ":" + address;
           vertx.eventBus().consumer(nameSpacedAddress, message -> {
               try {
                 Message<?> deserializedMessage =
@@ -131,7 +132,8 @@ public abstract class BaseVerticle extends AbstractVerticle {
         .setName(name)
         .setMetadata(new JsonObject()
             .put("className", this.getClass())
-            .put("deploymentID", vertx.getOrCreateContext().deploymentID()));
+            .put("deploymentID", vertx.getOrCreateContext().deploymentID())
+        .put("namespace", namespace));
 
     discovery.publish(record, ar -> {
       if (ar.succeeded()) {
