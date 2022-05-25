@@ -3,5 +3,5 @@ package io.chrisdima.services.pojos;
 import java.util.Optional;
 
 abstract public class BasePojo {
-  public Optional<String> namespace;
+  public Optional<String> namespace = Optional.empty();
 }
