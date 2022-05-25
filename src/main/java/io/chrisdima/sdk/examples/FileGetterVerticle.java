@@ -12,7 +12,9 @@ import io.vertx.core.json.JsonObject;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.Base64;
 /*
 * Returns base 64 encoded version of file specified by filePath.
@@ -32,6 +34,9 @@ public class FileGetterVerticle extends BaseVerticle {
           .addHeader("content_type",
               content_type != null ? content_type : "application/octet-stream" )
           .addHeader("is_base64", String.valueOf(true)));
+    } catch (NoSuchFileException e) {
+      logger.error(e + "\n" + Arrays.toString(e.getStackTrace()));
+      message.fail(404, e.getMessage());
     } catch (IOException e) {
       e.printStackTrace();
     }

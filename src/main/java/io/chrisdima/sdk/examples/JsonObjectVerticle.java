@@ -10,7 +10,6 @@ public class JsonObjectVerticle extends BaseVerticle {
 
   @Address("v1:deserialize")
   public void deserialize(Message<V1Deserialize> message) {
-    logger.info("chris: " + message.body());
     message.reply(new JsonObject().put("deserialized", "stuff"));
   }
 }

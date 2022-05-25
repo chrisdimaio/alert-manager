@@ -10,6 +10,7 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.eventbus.Message;
+import io.vertx.core.eventbus.ReplyException;
 import io.vertx.core.impl.logging.LoggerFactory;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
@@ -62,25 +63,30 @@ public class HTTPVerticle extends BaseVerticle {
     if (serviceExists(address)) {
       vertx.eventBus().request(address,
           context.getBodyAsJson(),
-          reply -> reply(context, address, reply));
+          reply -> reply(context, reply));
     } else {
       logger.error(address + " not found!");
+      context.response().setStatusCode(404).end();
     }
   }
 
-  private void reply(RoutingContext context, String address, AsyncResult<Message<Object>> reply) {
-    logger.info("sending event to " + address);
+  private void reply(RoutingContext context, AsyncResult<Message<Object>> reply) {
+    if (reply.succeeded()) {
 
-    context.response().putHeader("content-type", reply.result().headers().get("content_type"));
+      context.response().putHeader("content-type", reply.result().headers().get("content_type"));
+      boolean isBase64 = Boolean.parseBoolean(reply.result().headers().get("is_base64"));
 
-    boolean isBase64 = Boolean.parseBoolean(reply.result().headers().get("is_base64"));
+      if (isBase64) {
+        String base64 = ((JsonObject) reply.result().body()).getString("base64");
+        context.response().end(Buffer.buffer(Base64.getDecoder().decode(base64)));
 
-    if(isBase64) {
-      String base64 = ((JsonObject) reply.result().body()).getString("base64");
-      context.response().end(Buffer.buffer(Base64.getDecoder().decode(base64)));
-
+      } else {
+        context.response().end(((JsonObject) reply.result().body()).encode());
+      }
     } else {
-      context.response().end(((JsonObject) reply.result().body()).encode());
+      ReplyException exception = (ReplyException) reply.cause();
+      logger.info("code: " + exception.failureCode());
+      context.response().setStatusCode(exception.failureCode()).end();
     }
   }
 }

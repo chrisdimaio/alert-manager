@@ -61,9 +61,12 @@ public abstract class BaseVerticle extends AbstractVerticle {
                 Message<?> deserializedMessage =
                     new io.chrisdima.sdk.Message<>(message, getPojoClassFromAddress(address));
                 method.invoke(this, deserializedMessage);
-              } catch (IllegalAccessError | Exception e) {
+              } catch (IllegalAccessError | IllegalAccessException | InvocationTargetException e) {
                 logger.error(e + "\n" + Arrays.toString(e.getStackTrace()));
-//                message.fail(500, e.getMessage());
+                message.fail(500, e.getMessage());
+              } catch (IllegalArgumentException e) {
+                logger.error(e + "\n" + Arrays.toString(e.getStackTrace()));
+                message.fail(400, e.getMessage());
               }
           });
           this.publishService(nameSpacedAddress, nameSpacedAddress);
