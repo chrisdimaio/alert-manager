@@ -11,13 +11,16 @@ import io.vertx.servicediscovery.Record;
 import io.vertx.servicediscovery.ServiceDiscovery;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.commons.text.WordUtils;
 
 public abstract class BaseVerticle extends AbstractVerticle {
   private String namespace = "internal";
+  private List<Record> serviceRecords = new ArrayList<>();
 
   protected CookieCrumbGenerator cookieCrumbGenerator;
   protected Logger logger;
@@ -31,12 +34,33 @@ public abstract class BaseVerticle extends AbstractVerticle {
   @Override
   public void start() throws Exception {
     processAddressAnnotations();
+    run();
   }
+
+  @Override
+  public void stop() {
+    ServiceDiscovery discovery = ServiceDiscovery.create(vertx);
+
+    serviceRecords.forEach(record -> {
+      discovery.unpublish(record.getRegistration(), ar -> {
+        if (ar.succeeded()) {
+          logger.info("Successfully un-published: " + record.getLocation());
+        } else {
+          logger.info("Unable to un-published: " + record.getLocation());
+        }
+      });
+    });
+  }
+
+  // Runs at the end of start()
+  public void run() {}
 
   private Class<?> getPojoClassFromAddress(String address) {
     // Find a better way to do this.
     String pojoClass = WordUtils
-        .capitalizeFully(address.replace(":", " "))
+        .capitalizeFully(address
+            .replace(":", " ")
+            .replace("-", " "))
         .replace(" ", "");
 
     String pojoPath = this.getClass().getPackageName() + ".pojos." + pojoClass;
@@ -79,7 +103,7 @@ public abstract class BaseVerticle extends AbstractVerticle {
     ServiceDiscovery discovery = ServiceDiscovery.create(vertx);
 
     AtomicReference<Boolean> exists = new AtomicReference<>(false);
-    discovery.getRecord(r -> r.getLocation().getString("endpoint").equals(address), ar -> {
+    discovery.getRecord(r -> r.getLocation().getString("address").equals(address), ar -> {
       if (ar.succeeded()) {
         if (ar.result() != null) {
           logger.info("Found service: " + ar.result());
@@ -102,17 +126,20 @@ public abstract class BaseVerticle extends AbstractVerticle {
     ServiceDiscovery discovery = ServiceDiscovery.create(vertx);
 
     Record record = new Record()
-        .setType("eventbus-service-proxy")
-        .setLocation(new JsonObject().put("endpoint", address))
+        .setType("eventbus-service")
+        .setLocation(new JsonObject().put("address", address))
         .setName(name)
-        .setMetadata(new JsonObject().put("some-label", "some-value"));
+        .setMetadata(new JsonObject()
+            .put("className", this.getClass())
+            .put("deploymentID", vertx.getOrCreateContext().deploymentID()));
 
     discovery.publish(record, ar -> {
       if (ar.succeeded()) {
-        // publication succeeded
+        // Save the service record so we can un-publish later if need be.
+        serviceRecords.add(ar.result());
+
         logger.info("Successfully published service: " + ar.result());
       } else {
-        // publication failed
         logger.error("Failed to publish service: " + record);
       }
     });
