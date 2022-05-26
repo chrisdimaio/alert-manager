@@ -68,9 +68,9 @@ public abstract class BaseVerticle extends AbstractVerticle {
     try {
       return Class.forName(pojoPath);
     } catch (ClassNotFoundException e) {
-      logger.error(e);
+      logger.warn(pojoPath + " not found using JsonObject instead.");
     }
-    return null;
+    return JsonObject.class;
   }
 
   // Pull out all methods annotated with @Address and map them to their addresses.
@@ -81,23 +81,28 @@ public abstract class BaseVerticle extends AbstractVerticle {
         if (Objects.nonNull(addressAnnotation)) {
           String address = addressAnnotation.value();
           String nameSpacedAddress = namespace + ":" + address;
-          vertx.eventBus().consumer(nameSpacedAddress, message -> {
-              try {
-                Message<?> deserializedMessage =
-                    new io.chrisdima.sdk.Message<>(message, getPojoClassFromAddress(address));
-                method.invoke(this, deserializedMessage);
-              } catch (IllegalAccessError | IllegalAccessException | InvocationTargetException e) {
-                logger.error(e + "\n" + Arrays.toString(e.getStackTrace()));
-                message.fail(500, e.getMessage());
-              } catch (IllegalArgumentException e) {
-                logger.error(e + "\n" + Arrays.toString(e.getStackTrace()));
-                message.fail(400, e.getMessage());
-              }
-          });
+          createConsumer(address, nameSpacedAddress, method);
           this.publishService(nameSpacedAddress, nameSpacedAddress);
         }
       }
     }
+  }
+
+  private <T> void createConsumer (String address, String nameSpacedAddress, Method method) {
+    vertx.eventBus().consumer(nameSpacedAddress,
+        (io.vertx.core.eventbus.Message<T>message) -> {
+          try {
+            Message<?> deserializedMessage =
+                    new io.chrisdima.sdk.Message<>(message, getPojoClassFromAddress(address));
+            method.invoke(this, deserializedMessage);
+          } catch (IllegalAccessError | IllegalAccessException | InvocationTargetException e) {
+            logger.error(e + "\n" + Arrays.toString(e.getStackTrace()));
+            message.fail(500, e.getMessage());
+          } catch (IllegalArgumentException e) {
+            logger.error(e + "\n" + Arrays.toString(e.getStackTrace()));
+            message.fail(400, e.getMessage());
+          }
+        });
   }
 
   protected Boolean serviceExists(String address) {
@@ -107,7 +112,7 @@ public abstract class BaseVerticle extends AbstractVerticle {
     discovery.getRecord(r -> r.getLocation().getString("address").equals(address), ar -> {
       if (ar.succeeded()) {
         if (ar.result() != null) {
-          logger.info("Found service: " + ar.result());
+          logger.debug("Found service: " + ar.result().getLocation().getString("address"));
           exists.set(true);
         } else {
           // the lookup succeeded, but no matching service
@@ -140,7 +145,8 @@ public abstract class BaseVerticle extends AbstractVerticle {
         // Save the service record so we can un-publish later if need be.
         serviceRecords.add(ar.result());
 
-        logger.info("Successfully published service: " + ar.result());
+        logger.info("Successfully published service: "
+            + ar.result().getLocation().getString("address"));
       } else {
         logger.error("Failed to publish service: " + record);
       }

@@ -5,16 +5,25 @@ import io.vertx.core.Future;
 import io.vertx.core.MultiMap;
 import io.vertx.core.eventbus.DeliveryOptions;
 import io.vertx.core.json.JsonObject;
+import java.util.Objects;
 
 public class Message<T> implements io.vertx.core.eventbus.Message<Object> {
   private final io.vertx.core.eventbus.Message<?> message;
   private final T body;
 
-  public Message(io.vertx.core.eventbus.Message<?> message, Class<T> clazz) throws IllegalArgumentException {
+  public Message(io.vertx.core.eventbus.Message<?> message, Class<T> clazz)
+      throws IllegalArgumentException {
     this.message = message;
-    JsonObject body = (JsonObject)message.body();
-    this.body = body.mapTo(clazz);
 
+    JsonObject body = (JsonObject) message.body();
+    if (clazz.equals(JsonObject.class)) {
+      // There needs to be a better way to do this. Without it deserialization fails with below
+      // error.
+      // ava.lang.IllegalArgumentException: Unrecognized field "test"
+      // (class io.vertx.core.json.JsonObject), not marked as ignorable (one known property: "map"])
+      body = new JsonObject().put("map", body);
+    }
+    this.body = body.mapTo(clazz);
   }
 
   @Override

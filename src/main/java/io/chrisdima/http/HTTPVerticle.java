@@ -43,8 +43,9 @@ public class HTTPVerticle extends BaseVerticle {
     String address = Helpers.createEventbusAddress(context, NAMESPACE);
 
     if (serviceExists(address)) {
+      logger.info("Sending request to: " + address);
       vertx.eventBus().request(address,
-          context.getBodyAsJson(),
+          context.body().asJsonObject(),
           reply -> reply(context, reply));
     } else {
       logger.error(address + " not found!");

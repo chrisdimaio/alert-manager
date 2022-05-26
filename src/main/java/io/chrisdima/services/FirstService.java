@@ -9,17 +9,13 @@ import io.chrisdima.sdk.examples.JsonObjectVerticle;
 import io.chrisdima.services.pojos.V1DeployService;
 import io.chrisdima.services.pojos.V1Services;
 import io.chrisdima.services.pojos.V1UndeployService;
-import io.vertx.core.Verticle;
-import io.vertx.core.eventbus.ReplyException;
 import io.vertx.core.json.JsonObject;
-import io.vertx.servicediscovery.Record;
 import io.vertx.servicediscovery.ServiceDiscovery;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Objects;
 
 public class FirstService extends BaseVerticle {
 
@@ -28,6 +24,12 @@ public class FirstService extends BaseVerticle {
     vertx.deployVerticle(new JsonObjectVerticle());
     vertx.deployVerticle(new FileGetterVerticle());
     vertx.deployVerticle(new HTTPVerticle());
+  }
+
+  @Address("v1:test")
+  public void voidv1Test(Message<JsonObject> message) {
+    String test = message.body().getString("test");
+    message.reply(new JsonObject().put("found", test));
   }
 
   @Address("v1:deploy-service")
