@@ -20,13 +20,20 @@ public class Helpers {
   }
 
   public static String createEventbusAddress(RoutingContext context, String namespace) {
-    String[] components = context.request().path().split("/");
+    String[] components = context.request().uri().split("/");
 
     String event = null;
     String version = null;
-    if(components.length >= 3){
+
+    // If the URI contains 3 components use the provided namespace if it contains more than 3 then
+    // pull the namespace from the URI.
+    if(components.length == 3) {
       version = components[1];
       event = components[2];
+    } else if(components.length > 3){
+      namespace = components[1];
+      version = components[2];
+      event = components[3];
     }
     return String.format("%s:%s:%s", namespace, version, event);
   }

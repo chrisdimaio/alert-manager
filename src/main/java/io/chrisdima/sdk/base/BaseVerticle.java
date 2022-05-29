@@ -20,7 +20,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.apache.commons.text.WordUtils;
 
 public abstract class BaseVerticle extends AbstractVerticle {
-  private String namespace;
+  protected String namespace;
   private List<Record> serviceRecords = new ArrayList<>();
 
   protected Logger logger;

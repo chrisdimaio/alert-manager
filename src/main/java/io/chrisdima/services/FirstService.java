@@ -27,12 +27,9 @@ public class FirstService extends BaseVerticle {
 
   @Override
   public void run() {
-    vertx.deployVerticle(new JsonObjectVerticle()
-        .withNamespace(System.getenv("NAMESPACE")));
-    vertx.deployVerticle(new FileGetterVerticle()
-        .withNamespace(System.getenv("NAMESPACE")));
-    vertx.deployVerticle(new HTTPVerticle()
-        .withNamespace(System.getenv("NAMESPACE")));
+    vertx.deployVerticle(new JsonObjectVerticle().withNamespace("some-namespace"));
+    vertx.deployVerticle(new FileGetterVerticle());
+    vertx.deployVerticle(new HTTPVerticle());
   }
 
   @Address(V1_TEST)

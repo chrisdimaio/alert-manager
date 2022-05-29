@@ -8,7 +8,7 @@ import io.vertx.core.json.JsonObject;
 
 public class JsonObjectVerticle extends BaseVerticle {
 
-  @Address("v1:deserialize")
+  @Address("v1:random")
   public void deserialize(Message<V1Deserialize> message) {
     message.reply(new JsonObject().put("deserialized", "stuff"));
   }
