@@ -1,8 +1,10 @@
 package io.chrisdima.sdk.base;
 
+import io.chrisdima.sdk.Constants;
 import io.chrisdima.sdk.Message;
 import io.chrisdima.sdk.annotations.Address;
 import io.vertx.core.AbstractVerticle;
+import io.vertx.core.http.HttpMethod;
 import io.vertx.core.impl.logging.Logger;
 import io.vertx.core.impl.logging.LoggerFactory;
 import io.vertx.core.json.JsonObject;
@@ -18,7 +20,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.apache.commons.text.WordUtils;
 
 public abstract class BaseVerticle extends AbstractVerticle {
-  private String namespace = "internal";
+  private String namespace;
   private List<Record> serviceRecords = new ArrayList<>();
 
   protected Logger logger;
@@ -26,6 +28,12 @@ public abstract class BaseVerticle extends AbstractVerticle {
   protected BaseVerticle() {
     super();
     logger = LoggerFactory.getLogger( this.getClass() );
+
+    if (System.getenv().containsKey("NAMESPACE")) {
+      this.namespace = System.getenv("NAMESPACE");
+    } else {
+      this.namespace = Constants.DEFAULT_NAMESPACE;
+    }
   }
 
   @Override
@@ -52,8 +60,21 @@ public abstract class BaseVerticle extends AbstractVerticle {
   // Runs at the end of start()
   public void run() {}
 
+  public String getNamespace() {
+    return this.namespace;
+  }
+
   public void setNamespace(String namespace) {
+    if (Objects.nonNull(namespace)) {
+      this.namespace = namespace;
+    } else {
+      this.namespace = Constants.DEFAULT_NAMESPACE;
+    }
+  }
+
+  public BaseVerticle withNamespace(String namespace) {
     this.namespace = namespace;
+    return this;
   }
 
   private Class<?> getPojoClassFromAddress(String address) {
@@ -153,5 +174,9 @@ public abstract class BaseVerticle extends AbstractVerticle {
     });
 
     discovery.close();
+  }
+
+  protected HttpMethod method(Message<?> message) {
+    return HttpMethod.valueOf(message.headers().get("METHOD"));
   }
 }

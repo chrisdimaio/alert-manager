@@ -1,26 +1,32 @@
 package io.chrisdima.http;
 
+import io.chrisdima.sdk.Constants;
 import io.chrisdima.sdk.Helpers;
 import io.chrisdima.sdk.base.BaseVerticle;
 import io.vertx.core.AsyncResult;
+import io.vertx.core.MultiMap;
 import io.vertx.core.buffer.Buffer;
+import io.vertx.core.eventbus.DeliveryOptions;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.eventbus.ReplyException;
+import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
+import java.util.List;
+import java.util.Map;
 
 public class HTTPVerticle extends BaseVerticle {
   private static final int DEFAULT_HTTP_PORT = 1234;
-  private final static String NAMESPACE = "internal";
 
   @Override
   public void run() {
     Router router = Router.router(vertx);
-    router.route("/*").handler(BodyHandler.create());
+    router.route("/*").handler(BodyHandler.create().setBodyLimit(Constants.BODY_SIZE_LIMIT));
     router.route().handler(this::handler);
 
     vertx
@@ -40,17 +46,36 @@ public class HTTPVerticle extends BaseVerticle {
   }
 
   public void handler(RoutingContext context) {
-    String address = Helpers.createEventbusAddress(context, NAMESPACE);
+    String address = Helpers.createEventbusAddress(context, getNamespace());
 
     if (serviceExists(address)) {
+
+      JsonObject message;
+      HttpMethod requestMethod = context.request().method();
+      if (requestMethod.equals(HttpMethod.GET)) {
+        message = new JsonObject()
+            .put("params", convertMultiMapToCollections(context.request().params()));
+      } else {
+        message = context.body().asJsonObject();
+      }
+
       logger.info("Sending request to: " + address);
-      vertx.eventBus().request(address,
-          context.body().asJsonObject(),
-          reply -> reply(context, reply));
+      vertx.eventBus().request(
+          address,
+          message,
+          new DeliveryOptions().addHeader("METHOD", String.valueOf(requestMethod)),
+          reply -> reply(context, reply)
+      );
     } else {
       logger.error(address + " not found!");
       context.response().setStatusCode(404).end();
     }
+  }
+
+  public List<Map<String, String>> convertMultiMapToCollections(MultiMap multiMap) {
+    List<Map<String, String>> list = new ArrayList<>();
+    multiMap.entries().forEach(entry -> list.add(Map.of(entry.getKey(), entry.getValue())));
+    return list;
   }
 
   private void reply(RoutingContext context, AsyncResult<Message<Object>> reply) {
