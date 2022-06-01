@@ -19,12 +19,10 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
-import org.apache.commons.text.WordUtils;
 
 public abstract class BaseVerticle extends AbstractVerticle {
+  private final List<Record> serviceRecords = new ArrayList<>();
   protected String namespace;
-  private List<Record> serviceRecords = new ArrayList<>();
-
   protected Logger logger;
 
   protected BaseVerticle() {
@@ -39,7 +37,7 @@ public abstract class BaseVerticle extends AbstractVerticle {
   }
 
   @Override
-  public void start() throws Exception {
+  public void start() {
     processAddressAnnotations();
     run();
   }
@@ -48,15 +46,13 @@ public abstract class BaseVerticle extends AbstractVerticle {
   public void stop() {
     ServiceDiscovery discovery = ServiceDiscovery.create(vertx);
 
-    serviceRecords.forEach(record -> {
-      discovery.unpublish(record.getRegistration(), ar -> {
-        if (ar.succeeded()) {
-          logger.info("Successfully un-published: " + record.getLocation());
-        } else {
-          logger.info("Unable to un-published: " + record.getLocation());
-        }
-      });
-    });
+    serviceRecords.forEach(record -> discovery.unpublish(record.getRegistration(), ar -> {
+      if (ar.succeeded()) {
+        logger.info("Successfully un-published: " + record.getLocation());
+      } else {
+        logger.info("Unable to un-published: " + record.getLocation());
+      }
+    }));
   }
 
   // Runs at the end of start()
@@ -167,7 +163,7 @@ public abstract class BaseVerticle extends AbstractVerticle {
 
     discovery.publish(record, ar -> {
       if (ar.succeeded()) {
-        // Save the service record so we can un-publish later if need be.
+        // Save the service record, so we can un-publish later if need be.
         serviceRecords.add(ar.result());
 
         logger.info("Successfully published service: "
