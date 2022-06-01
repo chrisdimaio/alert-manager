@@ -6,12 +6,10 @@ import io.chrisdima.sdk.annotations.Address;
 import io.chrisdima.sdk.base.BaseVerticle;
 import io.chrisdima.sdk.examples.FileGetterVerticle;
 import io.chrisdima.sdk.examples.JsonObjectVerticle;
-import io.chrisdima.sdk.examples.pojos.V1Filegetter;
 import io.chrisdima.services.pojos.V1DeployService;
 import io.chrisdima.services.pojos.V1Services;
 import io.chrisdima.services.pojos.V1UndeployService;
 import io.vertx.core.http.HttpMethod;
-import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.servicediscovery.ServiceDiscovery;
 import java.lang.reflect.Constructor;
@@ -79,8 +77,8 @@ public class FirstService extends BaseVerticle {
 
   @Address("v1:undeploy-service")
   public void undeployService(Message<V1UndeployService> message) {
-    if (vertx.deploymentIDs().contains(message.body().deploymentID)) {
-      vertx.undeploy(message.body().deploymentID).onComplete(stringAsyncResult -> {
+    if (vertx.deploymentIDs().contains(message.body().deploymentId)) {
+      vertx.undeploy(message.body().deploymentId).onComplete(stringAsyncResult -> {
         if (stringAsyncResult.succeeded()) {
           message.reply(new JsonObject().put("success", true));
         } else {
