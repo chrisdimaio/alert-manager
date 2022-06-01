@@ -12,11 +12,13 @@ import io.chrisdima.services.pojos.V1UndeployService;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonObject;
 import io.vertx.servicediscovery.ServiceDiscovery;
+import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Properties;
 
 public class FirstService extends BaseVerticle {
 
@@ -93,7 +95,7 @@ public class FirstService extends BaseVerticle {
   }
 
   @Address(V1_SERVICE)
-  public void services(Message<V1Services> message) {
+  public void services(Message<V1Services> message) throws IOException {
     ServiceDiscovery discovery = ServiceDiscovery.create(vertx);
 
     discovery.getRecords(r -> true, ar -> {

@@ -1,7 +1,9 @@
 package io.chrisdima.sdk;
 
 import io.vertx.ext.web.RoutingContext;
+import java.io.IOException;
 import java.util.Map;
+import java.util.Properties;
 
 public class Helpers {
   private static final Map<String, String> addressToPOJO = Map.of(
@@ -17,6 +19,12 @@ public class Helpers {
       return addressToPOJO.get(address);
     }
     throw new ClassNotFoundException();
+  }
+
+  public static Properties getProjectProperties() throws IOException {
+    Properties properties = new Properties();
+    properties.load(Helpers.class.getClassLoader().getResourceAsStream("project.properties"));
+    return properties;
   }
 
   public static String createEventbusAddress(RoutingContext context, String namespace) {

@@ -1,6 +1,7 @@
 package io.chrisdima.sdk.base;
 
 import io.chrisdima.sdk.Constants;
+import io.chrisdima.sdk.Helpers;
 import io.chrisdima.sdk.Message;
 import io.chrisdima.sdk.annotations.Address;
 import io.vertx.core.AbstractVerticle;
@@ -10,6 +11,7 @@ import io.vertx.core.impl.logging.LoggerFactory;
 import io.vertx.core.json.JsonObject;
 import io.vertx.servicediscovery.Record;
 import io.vertx.servicediscovery.ServiceDiscovery;
+import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
@@ -18,10 +20,13 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
+import java.util.Properties;
 import java.util.concurrent.atomic.AtomicReference;
 
 public abstract class BaseVerticle extends AbstractVerticle {
   private final List<Record> serviceRecords = new ArrayList<>();
+
+  private Properties properties = null;
   protected String namespace;
   protected Logger logger;
 
@@ -33,6 +38,12 @@ public abstract class BaseVerticle extends AbstractVerticle {
       this.namespace = System.getenv("NAMESPACE");
     } else {
       this.namespace = Constants.DEFAULT_NAMESPACE;
+    }
+
+    try {
+      properties = Helpers.getProjectProperties();
+    } catch (IOException e) {
+      logger.error(e);
     }
   }
 
@@ -103,7 +114,7 @@ public abstract class BaseVerticle extends AbstractVerticle {
           String address = addressAnnotation.value();
           String nameSpacedAddress = namespace + ":" + address;
           createConsumer(nameSpacedAddress, method);
-          this.publishService(nameSpacedAddress, nameSpacedAddress);
+          publishService(nameSpacedAddress, nameSpacedAddress);
         }
       }
     }
@@ -159,6 +170,7 @@ public abstract class BaseVerticle extends AbstractVerticle {
         .setMetadata(new JsonObject()
             .put("className", this.getClass())
             .put("deploymentID", vertx.getOrCreateContext().deploymentID())
+            .put("appVersion", properties.get("version"))
         .put("namespace", namespace));
 
     discovery.publish(record, ar -> {
