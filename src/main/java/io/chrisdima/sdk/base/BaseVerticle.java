@@ -12,6 +12,8 @@ import io.vertx.servicediscovery.Record;
 import io.vertx.servicediscovery.ServiceDiscovery;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -77,19 +79,21 @@ public abstract class BaseVerticle extends AbstractVerticle {
     return this;
   }
 
-  private Class<?> getPojoClassFromAddress(String address) {
-    // Find a better way to do this.
-    String pojoClass = WordUtils
-        .capitalizeFully(address
-            .replace(":", " ")
-            .replace("-", " "))
-        .replace(" ", "");
+  private Class<?> getPojoClassFromMethod(Method method) {
+    Type actualType = null;
+    if (method.getGenericParameterTypes().length == 1) {
+      ParameterizedType parameterizedType =
+          (ParameterizedType) method.getGenericParameterTypes()[0];
+      if (parameterizedType.getActualTypeArguments().length == 1) {
+        actualType = parameterizedType.getActualTypeArguments()[0];
+        logger.info("Actual type: " + actualType);
+      }
+    }
 
-    String pojoPath = this.getClass().getPackageName() + ".pojos." + pojoClass;
     try {
-      return Class.forName(pojoPath);
+      return Class.forName(Objects.requireNonNull(actualType).getTypeName());
     } catch (ClassNotFoundException e) {
-      logger.warn(pojoPath + " not found using JsonObject instead.");
+      logger.error(e);
     }
     return JsonObject.class;
   }
@@ -102,19 +106,19 @@ public abstract class BaseVerticle extends AbstractVerticle {
         if (Objects.nonNull(addressAnnotation)) {
           String address = addressAnnotation.value();
           String nameSpacedAddress = namespace + ":" + address;
-          createConsumer(address, nameSpacedAddress, method);
+          createConsumer(nameSpacedAddress, method);
           this.publishService(nameSpacedAddress, nameSpacedAddress);
         }
       }
     }
   }
 
-  private <T> void createConsumer (String address, String nameSpacedAddress, Method method) {
+  private <T> void createConsumer (String nameSpacedAddress, Method method) {
     vertx.eventBus().consumer(nameSpacedAddress,
         (io.vertx.core.eventbus.Message<T>message) -> {
           try {
             Message<?> deserializedMessage =
-                    new io.chrisdima.sdk.Message<>(message, getPojoClassFromAddress(address));
+                    new io.chrisdima.sdk.Message<>(message, getPojoClassFromMethod(method));
             method.invoke(this, deserializedMessage);
           } catch (IllegalAccessError | IllegalAccessException | InvocationTargetException e) {
             logger.error(e + "\n" + Arrays.toString(e.getStackTrace()));
