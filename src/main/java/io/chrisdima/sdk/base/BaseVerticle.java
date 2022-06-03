@@ -171,6 +171,7 @@ public abstract class BaseVerticle extends AbstractVerticle {
             .put("className", this.getClass())
             .put("deploymentID", vertx.getOrCreateContext().deploymentID())
             .put("appVersion", properties.get("version"))
+            .put("appName", properties.get("artifactId"))
         .put("namespace", namespace));
 
     discovery.publish(record, ar -> {
