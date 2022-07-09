@@ -70,6 +70,6 @@ public class IdServer extends BaseVerticle {
   private String randomString(int size) {
     byte[] randomBytes = new byte[size];
     new Random().nextBytes(randomBytes);
-    return new String(Base64.getEncoder().encode(randomBytes));
+    return Base64.getEncoder().encodeToString(randomBytes);
   }
 }
