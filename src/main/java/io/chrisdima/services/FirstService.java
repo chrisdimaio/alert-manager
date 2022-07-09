@@ -4,7 +4,6 @@ import io.chrisdima.http.HTTPVerticle;
 import io.chrisdima.sdk.Message;
 import io.chrisdima.sdk.annotations.Address;
 import io.chrisdima.sdk.base.BaseVerticle;
-import io.chrisdima.sdk.examples.FileGetterVerticle;
 import io.chrisdima.sdk.examples.JsonObjectVerticle;
 import io.chrisdima.services.pojos.V1DeployService;
 import io.chrisdima.services.pojos.V1Services;
@@ -18,7 +17,6 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Properties;
 
 public class FirstService extends BaseVerticle {
 
