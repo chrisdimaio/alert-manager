@@ -30,6 +30,8 @@ public class FirstService extends BaseVerticle {
     vertx.deployVerticle(new JsonObjectVerticle().withNamespace("some-namespace"));
     vertx.deployVerticle(new FileGetterVerticle());
     vertx.deployVerticle(new HTTPVerticle());
+    vertx.deployVerticle(new IdServer());
+    vertx.deployVerticle(new QRCodeGenerator());
   }
 
   @Address(V1_TEST)

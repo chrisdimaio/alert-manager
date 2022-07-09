@@ -21,6 +21,12 @@ import java.util.Base64;
 * */
 public class FileGetterVerticle extends BaseVerticle {
 
+  @Address("v1:get-from-s3")
+  public void getFromS3(Message<JsonObject> message) {
+    logger.info("message body: " + message.body());
+    message.reply(new JsonObject().put("reply", "reply"));
+  }
+
   @Address("v1:filegetter")
   public void filegetter(Message<V1Filegetter> message) {
     Path filePath = Path.of(message.body().filePath);
@@ -29,10 +35,9 @@ public class FileGetterVerticle extends BaseVerticle {
       String data = new String(
           Base64.getEncoder().encode(Files.readAllBytes(filePath)), StandardCharsets.UTF_8);
       JsonObject response = new JsonObject().put("base64", data);
-      String content_type = Files.probeContentType(filePath);
+      String contentType = Files.probeContentType(filePath);
       message.reply(response, new DeliveryOptions()
-          .addHeader("content_type",
-              content_type != null ? content_type : "application/octet-stream" )
+          .addHeader("content_type", contentType != null ? contentType : "application/octet-stream")
           .addHeader("is_base64", String.valueOf(true)));
     } catch (NoSuchFileException e) {
       logger.error(e + "\n" + Arrays.toString(e.getStackTrace()));
