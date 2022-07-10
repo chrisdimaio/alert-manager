@@ -68,7 +68,8 @@ public class IdServer extends BaseVerticle {
   }
 
   private String randomString(int size) {
-    byte[] randomBytes = new byte[size];
+    // Calculate how many bytes are needed for n bits (nBits + 8 - 1) / 8 = nBytes
+    byte[] randomBytes = new byte[(size + 8 - 1) / 8];
     new Random().nextBytes(randomBytes);
     return Base64.getEncoder().encodeToString(randomBytes);
   }
