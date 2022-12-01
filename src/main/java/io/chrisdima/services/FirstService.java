@@ -30,6 +30,7 @@ public class FirstService extends BaseVerticle {
     vertx.deployVerticle(new HTTPVerticle());
     vertx.deployVerticle(new IdServer());
     vertx.deployVerticle(new QRCodeGenerator());
+    vertx.deployVerticle(new AlertManager());
   }
 
   @Address(V1_TEST)
@@ -58,14 +59,14 @@ public class FirstService extends BaseVerticle {
 
       vertx.deployVerticle(verticle)
           .onComplete(stringAsyncResult -> {
-        if (stringAsyncResult.succeeded()) {
-          message.reply(new JsonObject().put("deploymentID", stringAsyncResult.result()));
-        } else {
-          logger.error(stringAsyncResult.cause().getMessage() + "\n"
-              + Arrays.toString(stringAsyncResult.cause().getStackTrace()));
-          message.fail(500, stringAsyncResult.cause().getMessage());
-        }
-      });
+            if (stringAsyncResult.succeeded()) {
+              message.reply(new JsonObject().put("deploymentID", stringAsyncResult.result()));
+            } else {
+              logger.error(stringAsyncResult.cause().getMessage() + "\n"
+                  + Arrays.toString(stringAsyncResult.cause().getStackTrace()));
+              message.fail(500, stringAsyncResult.cause().getMessage());
+            }
+        });
 
     } catch (ClassNotFoundException | NoSuchMethodException e) {
       logger.error(e + "\n" + Arrays.toString(e.getStackTrace()));
